@@ -1,0 +1,114 @@
+-- Create the GUI elements
+local screenGui = Instance.new("ScreenGui")
+local frame = Instance.new("Frame")
+local hitboxLabel = Instance.new("TextLabel")
+local hitboxInput = Instance.new("TextBox")
+local applyButton = Instance.new("TextButton")
+
+-- Parenting the GUI elements
+screenGui.Name = "HitboxGUI"
+screenGui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
+
+frame.Parent = screenGui
+frame.Size = UDim2.new(0, 200, 0, 250) -- Adjust size as needed
+frame.Position = UDim2.new(0.5, -100, 0.5, -125) -- Center the frame initially
+frame.BackgroundColor3 = Color3.fromRGB(34, 34, 34) -- Dark background color
+frame.BorderSizePixel = 0 -- No border
+frame.AnchorPoint = Vector2.new(0.5, 0.5) -- Center anchor point
+frame.Visible = false -- Initially hide the frame
+
+-- Apply roundness to the frame
+local round = Instance.new("UICorner")
+round.CornerRadius = UDim.new(0, 10)
+round.Parent = frame
+
+-- Hitbox Label
+hitboxLabel.Parent = frame
+hitboxLabel.Size = UDim2.new(1, 0, 0, 30)
+hitboxLabel.Position = UDim2.new(0, 0, 0, 20)
+hitboxLabel.BackgroundTransparency = 1
+hitboxLabel.Font = Enum.Font.SourceSans
+hitboxLabel.Text = "Enter Hitbox Size:"
+hitboxLabel.TextColor3 = Color3.fromRGB(255, 255, 255) -- White text color
+hitboxLabel.TextSize = 18
+
+-- Hitbox Input TextBox
+hitboxInput.Parent = frame
+hitboxInput.Size = UDim2.new(0.8, 0, 0, 30)
+hitboxInput.Position = UDim2.new(0.1, 0, 0, 70)
+hitboxInput.BackgroundColor3 = Color3.fromRGB(47, 47, 47) -- Dark background color
+hitboxInput.Font = Enum.Font.SourceSans
+hitboxInput.Text = tostring(_G.HeadSize) -- Default value based on _G.HeadSize
+hitboxInput.TextColor3 = Color3.fromRGB(255, 255, 255) -- White text color
+hitboxInput.TextSize = 18
+
+-- Apply Button
+applyButton.Parent = frame
+applyButton.Size = UDim2.new(0.8, 0, 0, 30)
+applyButton.Position = UDim2.new(0.1, 0, 0, 120)
+applyButton.BackgroundColor3 = Color3.fromRGB(0, 170, 255) -- Roblox blue
+applyButton.Font = Enum.Font.SourceSans
+applyButton.Text = "Apply"
+applyButton.TextColor3 = Color3.fromRGB(255, 255, 255) -- White text color
+applyButton.TextSize = 18
+
+-- Function to update hitbox size
+local function updateHitboxSize(size)
+    local newSize = tonumber(size)
+    if newSize then
+        _G.HeadSize = newSize
+        for _, player in ipairs(game:GetService('Players'):GetPlayers()) do
+            if player.Name ~= game.Players.LocalPlayer.Name then
+                pcall(function()
+                    player.Character.HumanoidRootPart.Size = Vector3.new(newSize, newSize, newSize)
+                    player.Character.HumanoidRootPart.Transparency = 0.7
+                    player.Character.HumanoidRootPart.BrickColor = BrickColor.new("Really blue")
+                    player.Character.HumanoidRootPart.Material = "Neon"
+                    player.Character.HumanoidRootPart.CanCollide = false
+                end)
+            end
+        end
+    else
+        warn("Invalid input for hitbox size.")
+    end
+end
+
+-- Apply Button Click Event
+applyButton.MouseButton1Click:Connect(function()
+    updateHitboxSize(hitboxInput.Text)
+end)
+
+-- Make the GUI movable
+local dragging = false
+local startPos
+local offset
+
+frame.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = true
+        startPos = frame.Position
+        offset = input.Position - frame.Position
+    end
+end)
+
+frame.InputChanged:Connect(function(input)
+    if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+        local newPosition = input.Position - offset
+        frame.Position = UDim2.new(0, newPosition.X, 0, newPosition.Y)
+    end
+end)
+
+frame.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = false
+    end
+end)
+
+-- Toggle GUI visibility on 'L' key press
+local UIS = game:GetService("UserInputService")
+
+UIS.InputBegan:Connect(function(input)
+    if input.KeyCode == Enum.KeyCode.L then
+        frame.Visible = not frame.Visible
+    end
+end)
