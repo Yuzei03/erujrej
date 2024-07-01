@@ -1,79 +1,162 @@
--- Create the Speed GUI elements
-local screenGuiSpeed = Instance.new("ScreenGui")
-local frameSpeed = Instance.new("Frame")
-local speedLabel = Instance.new("TextLabel")
-local speedInput = Instance.new("TextBox")
-local applyButtonSpeed = Instance.new("TextButton")
+local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/violin-suzutsuki/LinoriaLib/main/Library.lua"))()
+local ThemeManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/violin-suzutsuki/LinoriaLib/main/addons/ThemeManager.lua"))()
+local SaveManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/violin-suzutsuki/LinoriaLib/main/addons/SaveManager.lua"))()
 
--- Parenting the Speed GUI elements
-screenGuiSpeed.Name = "SpeedGUI"
-screenGuiSpeed.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
+-- Create the main window
+local Window = Library:CreateWindow({
+    Title = 'GPO BR',
+    Center = true,
+    AutoShow = true,
+})
 
-frameSpeed.Parent = screenGuiSpeed
-frameSpeed.Size = UDim2.new(0, 200, 0, 150) -- Adjust size as needed
-frameSpeed.Position = UDim2.new(1, -220, 1, -170) -- Bottom-right corner
-frameSpeed.BackgroundColor3 = Color3.fromRGB(34, 34, 34) -- Dark background color
-frameSpeed.BorderSizePixel = 0 -- No border
-frameSpeed.AnchorPoint = Vector2.new(0, 0) -- Anchor point
-frameSpeed.Visible = false -- Initially hide the frame
+-- Create a tab named "GPO BR"
+local GPOTab = Window:AddTab('GPO BR')
 
--- Apply roundness to the frame
-local roundSpeed = Instance.new("UICorner")
-roundSpeed.CornerRadius = UDim.new(0, 10)
-roundSpeed.Parent = frameSpeed
+-- Add a groupbox for speed settings within the "GPO BR" tab
+local SpeedGroupBox = GPOTab:AddLeftGroupbox('Speed')
 
--- Speed Label
-speedLabel.Parent = frameSpeed
-speedLabel.Size = UDim2.new(1, 0, 0, 30)
-speedLabel.Position = UDim2.new(0, 0, 0, 10)
-speedLabel.BackgroundTransparency = 1
-speedLabel.Font = Enum.Font.SourceSans
-speedLabel.Text = "Enter Speed:"
-speedLabel.TextColor3 = Color3.fromRGB(255, 255, 255) -- White text color
-speedLabel.TextSize = 18
+-- Add a textbox to enter speed
+SpeedGroupBox:AddInput('SpeedInput', {
+    Default = '16',
+    Numeric = true,
+    Finished = false,
+    Text = 'Enter Speed',
+    Tooltip = 'Set your character speed',
+})
 
--- Speed Input TextBox
-speedInput.Parent = frameSpeed
-speedInput.Size = UDim2.new(0.8, 0, 0, 30)
-speedInput.Position = UDim2.new(0.1, 0, 0, 50)
-speedInput.BackgroundColor3 = Color3.fromRGB(47, 47, 47) -- Dark background color
-speedInput.Font = Enum.Font.SourceSans
-speedInput.Text = "16" -- Default value (Roblox's default walk speed)
-speedInput.TextColor3 = Color3.fromRGB(255, 255, 255) -- White text color
-speedInput.TextSize = 18
+-- Add a button to apply speed
+SpeedGroupBox:AddButton('Apply Speed', function()
+    local speed = Options.SpeedInput.Value
+    local player = game.Players.LocalPlayer
+    local character = player.Character or player.CharacterAdded:Wait()
+    local humanoid = character:WaitForChild("Humanoid")
+    humanoid.WalkSpeed = tonumber(speed)
 
--- Apply Button
-applyButtonSpeed.Parent = frameSpeed
-applyButtonSpeed.Size = UDim2.new(0.8, 0, 0, 30)
-applyButtonSpeed.Position = UDim2.new(0.1, 0, 0, 90)
-applyButtonSpeed.BackgroundColor3 = Color3.fromRGB(0, 170, 255) -- Roblox blue
-applyButtonSpeed.Font = Enum.Font.SourceSans
-applyButtonSpeed.Text = "Apply"
-applyButtonSpeed.TextColor3 = Color3.fromRGB(255, 255, 255) -- White text color
-applyButtonSpeed.TextSize = 18
+    -- Persist the speed in a global variable
+    _G.WalkSpeed = tonumber(speed)
+end)
 
--- Function to update walk speed
-local function updateSpeed(speed)
-    local newSpeed = tonumber(speed)
-    if newSpeed then
-        local player = game.Players.LocalPlayer
-        local character = player.Character or player.CharacterAdded:Wait()
-        local humanoid = character:WaitForChild("Humanoid")
-        humanoid.WalkSpeed = newSpeed
+-- Add a groupbox for hitbox settings within the "GPO BR" tab
+local HitboxGroupBox = GPOTab:AddLeftGroupbox('Hitbox')
 
-        -- Persist the speed in a global variable
-        _G.WalkSpeed = newSpeed
-    else
-        warn("Invalid input for speed.")
+-- Add a textbox to enter hitbox size
+HitboxGroupBox:AddInput('HitboxInput', {
+    Default = '5',
+    Numeric = true,
+    Finished = false,
+    Text = 'Enter Hitbox Size',
+    Tooltip = 'Set the hitbox size for other players',
+})
+
+-- Add a button to apply hitbox size and render through walls
+HitboxGroupBox:AddButton('Apply Hitbox (ESP)', function()
+    local size = Options.HitboxInput.Value
+    _G.HeadSize = tonumber(size)
+    for _, player in ipairs(game:GetService('Players'):GetPlayers()) do
+        if player.Name ~= game.Players.LocalPlayer.Name then
+            pcall(function()
+                local rootPart = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+                if rootPart then
+                    rootPart.Size = Vector3.new(_G.HeadSize, _G.HeadSize, _G.HeadSize)
+                    rootPart.Transparency = 0.7
+                    rootPart.BrickColor = BrickColor.new("Really blue")
+                    rootPart.Material = "Neon"
+                    rootPart.CanCollide = false
+                end
+            end)
+        end
+    end
+end)
+
+-- Add a groupbox for ESP settings within the "GPO BR" tab
+local ESPGroupBox = GPOTab:AddRightGroupbox('ESP')
+
+-- Add a toggle to enable/disable ESP
+ESPGroupBox:AddToggle('EnableESP', {
+    Text = 'Enable ESP',
+    Default = false,
+    Tooltip = 'Toggle ESP to locate players',
+})
+
+-- Function to create ESP for players
+local function createESP(player)
+    if player.Character and not player.Character:FindFirstChild("ESPBox") then
+        local box = Instance.new("BoxHandleAdornment")
+        box.Name = "ESPBox"
+        box.Adornee = player.Character:WaitForChild("HumanoidRootPart")
+        box.AlwaysOnTop = true
+        box.ZIndex = 5
+        box.Size = player.Character.HumanoidRootPart.Size + Vector3.new(1, 1, 1)
+        box.Transparency = 0.7
+        box.Color3 = Color3.new(1, 0, 0) -- Red color
+        box.Parent = player.Character.HumanoidRootPart
     end
 end
 
--- Apply Button Click Event
-applyButtonSpeed.MouseButton1Click:Connect(function()
-    updateSpeed(speedInput.Text)
+-- Function to remove ESP from players
+local function removeESP(player)
+    if player.Character and player.Character:FindFirstChild("ESPBox") then
+        player.Character:FindFirstChild("ESPBox"):Destroy()
+    end
+end
+
+-- Toggle ESP functionality
+Options.EnableESP:OnChanged(function()
+    if Options.EnableESP.Value then
+        for _, player in ipairs(game:GetService('Players'):GetPlayers()) do
+            if player ~= game.Players.LocalPlayer then
+                createESP(player)
+            end
+        end
+        game:GetService('Players').PlayerAdded:Connect(function(player)
+            if player ~= game.Players.LocalPlayer then
+                player.CharacterAdded:Connect(function()
+                    createESP(player)
+                end)
+            end
+        end)
+    else
+        for _, player in ipairs(game:GetService('Players'):GetPlayers()) do
+            if player ~= game.Players.LocalPlayer then
+                removeESP(player)
+            end
+        end
+    end
 end)
 
--- Function to continuously ensure the walk speed remains as set
+-- Replace ESP functionality with rendering through walls
+_G.HeadSize = 5
+_G.Disabled = true
+
+game:GetService('RunService').RenderStepped:Connect(function()
+    if _G.Disabled then
+        for _, player in ipairs(game:GetService('Players'):GetPlayers()) do
+            if player.Name ~= game:GetService('Players').LocalPlayer.Name then
+                pcall(function()
+                    local rootPart = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+                    if rootPart then
+                        rootPart.Size = Vector3.new(_G.HeadSize, _G.HeadSize, _G.HeadSize)
+                        rootPart.Transparency = 0.7
+                        rootPart.BrickColor = BrickColor.new("Really blue")
+                        rootPart.Material = "Neon"
+                        rootPart.CanCollide = false
+                    end
+                end)
+            end
+        end
+    end
+end)
+
+-- Apply initial settings and start maintaining speed
+Library:SetWatermarkVisibility(true)
+Library:SetWatermark('GPO BR')
+
+ThemeManager:SetLibrary(Library)
+SaveManager:SetLibrary(Library)
+
+ThemeManager:ApplyToTab(Window)
+SaveManager:LoadAutoloadConfig()
+
 local function maintainSpeed()
     while true do
         local player = game.Players.LocalPlayer
@@ -90,153 +173,18 @@ local function maintainSpeed()
     end
 end
 
--- Start the function to maintain speed
-coroutine.wrap(maintainSpeed)()
+maintainSpeed()  -- Start maintaining speed
 
--- Create the Hitbox GUI elements
-local screenGuiHitbox = Instance.new("ScreenGui")
-local frameHitbox = Instance.new("Frame")
-local hitboxLabel = Instance.new("TextLabel")
-local hitboxInput = Instance.new("TextBox")
-local applyButtonHitbox = Instance.new("TextButton")
+-- Minimize and maximize GUI functionality
+local guiMinimized = false
 
--- Parenting the Hitbox GUI elements
-screenGuiHitbox.Name = "HitboxGUI"
-screenGuiHitbox.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
-
-frameHitbox.Parent = screenGuiHitbox
-frameHitbox.Size = UDim2.new(0, 200, 0, 150) -- Adjust size as needed
-frameHitbox.Position = UDim2.new(0, 20, 1, -170) -- Bottom-left corner
-frameHitbox.BackgroundColor3 = Color3.fromRGB(34, 34, 34) -- Dark background color
-frameHitbox.BorderSizePixel = 0 -- No border
-frameHitbox.AnchorPoint = Vector2.new(0, 0) -- Anchor point
-frameHitbox.Visible = false -- Initially hide the frame
-
--- Apply roundness to the frame
-local roundHitbox = Instance.new("UICorner")
-roundHitbox.CornerRadius = UDim.new(0, 10)
-roundHitbox.Parent = frameHitbox
-
--- Hitbox Label
-hitboxLabel.Parent = frameHitbox
-hitboxLabel.Size = UDim2.new(1, 0, 0, 30)
-hitboxLabel.Position = UDim2.new(0, 0, 0, 10)
-hitboxLabel.BackgroundTransparency = 1
-hitboxLabel.Font = Enum.Font.SourceSans
-hitboxLabel.Text = "Enter Hitbox Size:"
-hitboxLabel.TextColor3 = Color3.fromRGB(255, 255, 255) -- White text color
-hitboxLabel.TextSize = 18
-
--- Hitbox Input TextBox
-hitboxInput.Parent = frameHitbox
-hitboxInput.Size = UDim2.new(0.8, 0, 0, 30)
-hitboxInput.Position = UDim2.new(0.1, 0, 0, 50)
-hitboxInput.BackgroundColor3 = Color3.fromRGB(47, 47, 47) -- Dark background color
-hitboxInput.Font = Enum.Font.SourceSans
-hitboxInput.Text = "5" -- Default value for hitbox size
-hitboxInput.TextColor3 = Color3.fromRGB(255, 255, 255) -- White text color
-hitboxInput.TextSize = 18
-
--- Apply Button
-applyButtonHitbox.Parent = frameHitbox
-applyButtonHitbox.Size = UDim2.new(0.8, 0, 0, 30)
-applyButtonHitbox.Position = UDim2.new(0.1, 0, 0, 90)
-applyButtonHitbox.BackgroundColor3 = Color3.fromRGB(0, 170, 255) -- Roblox blue
-applyButtonHitbox.Font = Enum.Font.SourceSans
-applyButtonHitbox.Text = "Apply"
-applyButtonHitbox.TextColor3 = Color3.fromRGB(255, 255, 255) -- White text color
-applyButtonHitbox.TextSize = 18
-
--- Function to update hitbox size
-local function updateHitboxSize(size)
-    local newSize = tonumber(size)
-    if newSize then
-        _G.HeadSize = newSize
-        for _, player in ipairs(game:GetService('Players'):GetPlayers()) do
-            if player.Name ~= game.Players.LocalPlayer.Name then
-                pcall(function()
-                    player.Character.HumanoidRootPart.Size = Vector3.new(newSize, newSize, newSize)
-                    player.Character.HumanoidRootPart.Transparency = 0.7
-                    player.Character.HumanoidRootPart.BrickColor = BrickColor.new("Really blue")
-                    player.Character.HumanoidRootPart.Material = "Neon"
-                    player.Character.HumanoidRootPart.CanCollide = false
-                end)
-            end
-        end
-    else
-        warn("Invalid input for hitbox size.")
-    end
+local function toggleGUI()
+    guiMinimized = not guiMinimized
+    Window:SetVisible(not guiMinimized)
 end
 
--- Apply Button Click Event for Hitbox
-applyButtonHitbox.MouseButton1Click:Connect(function()
-    updateHitboxSize(hitboxInput.Text)
-end)
+-- Add minimize button to toggle GUI visibility
+local MinimizeButton = Window:AddButton('Minimize', toggleGUI)
 
--- Make the Speed GUI movable
-local draggingSpeed = false
-local startPosSpeed
-local offsetSpeed
-
-frameSpeed.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        draggingSpeed = true
-        startPosSpeed = frameSpeed.Position
-        offsetSpeed = input.Position - frameSpeed.Position
-    end
-end)
-
-frameSpeed.InputChanged:Connect(function(input)
-    if draggingSpeed and input.UserInputType == Enum.UserInputType.MouseMovement then
-        local newPositionSpeed = input.Position - offsetSpeed
-        frameSpeed.Position = UDim2.new(0, newPositionSpeed.X, 0, newPositionSpeed.Y)
-    end
-end)
-
-frameSpeed.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        draggingSpeed = false
-    end
-end)
-
--- Make the Hitbox GUI movable
-local draggingHitbox = false
-local startPosHitbox
-local offsetHitbox
-
-frameHitbox.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        draggingHitbox = true
-        startPosHitbox = frameHitbox.Position
-        offsetHitbox = input.Position - frameHitbox.Position
-    end
-end)
-
-frameHitbox.InputChanged:Connect(function(input)
-    if draggingHitbox and input.UserInputType == Enum.UserInputType.MouseMovement then
-        local newPositionHitbox = input.Position - offsetHitbox
-        frameHitbox.Position = UDim2.new(0, newPositionHitbox.X, 0, newPositionHitbox.Y)
-    end
-end)
-
-frameHitbox.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        draggingHitbox = false
-    end
-end)
-
--- Toggle GUI visibility on 'L' key press
-local UIS = game:GetService("UserInputService")
-
-UIS.InputBegan:Connect(function(input)
-    if input.KeyCode == Enum.KeyCode.L then
-        frameSpeed.Visible = not frameSpeed.Visible
-    end
-end)
-
--- Toggle Hitbox GUI visibility on 'K' key press
-UIS.InputBegan:Connect(function(input)
-    if input.KeyCode == Enum.KeyCode.K then
-        frameHitbox.Visible = not frameHitbox.Visible
-    end
-end)
+-- Ensure GUI starts as visible
+Window:SetVisible(true)
