@@ -1,190 +1,131 @@
-local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/violin-suzutsuki/LinoriaLib/main/Library.lua"))()
-local ThemeManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/violin-suzutsuki/LinoriaLib/main/addons/ThemeManager.lua"))()
-local SaveManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/violin-suzutsuki/LinoriaLib/main/addons/SaveManager.lua"))()
+-- Define constants and variables
+local player = game.Players.LocalPlayer
+local gui = Instance.new("ScreenGui")
+gui.Parent = player.PlayerGui
+local mainFrame = Instance.new("Frame")
+mainFrame.Size = UDim2.new(0, 300, 0, 400)
+mainFrame.Position = UDim2.new(0.5, -150, 0.5, -200)
+mainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+mainFrame.BorderSizePixel = 0
+mainFrame.Visible = true
+mainFrame.Parent = gui
 
--- Create the main window
-local Window = Library:CreateWindow({
-    Title = 'GPO BR',
-    Center = true,
-    AutoShow = true,
-})
+-- Function to create a text label
+local function createLabel(text, position)
+    local label = Instance.new("TextLabel")
+    label.Text = text
+    label.TextColor3 = Color3.fromRGB(255, 255, 255)
+    label.TextSize = 18
+    label.Font = Enum.Font.SourceSans
+    label.Position = UDim2.new(0, 10, 0, position)
+    label.Size = UDim2.new(1, -20, 0, 30)
+    label.BackgroundTransparency = 1
+    label.Parent = mainFrame
+    return label
+end
 
--- Create a tab named "GPO BR"
-local GPOTab = Window:AddTab('GPO BR')
+-- Function to create an input box
+local function createInput(defaultValue, numeric, position)
+    local input = Instance.new("TextBox")
+    input.PlaceholderText = defaultValue
+    input.Text = ""
+    input.TextColor3 = Color3.fromRGB(255, 255, 255)
+    input.TextSize = 18
+    input.Font = Enum.Font.SourceSans
+    input.Position = UDim2.new(0, 10, 0, position)
+    input.Size = UDim2.new(1, -20, 0, 30)
+    input.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+    input.BorderColor3 = Color3.fromRGB(100, 100, 100)
+    input.Parent = mainFrame
+    return input
+end
 
--- Add a groupbox for speed settings within the "GPO BR" tab
-local SpeedGroupBox = GPOTab:AddLeftGroupbox('Speed')
+-- Function to create a button
+local function createButton(text, onClick, position)
+    local button = Instance.new("TextButton")
+    button.Text = text
+    button.TextColor3 = Color3.fromRGB(255, 255, 255)
+    button.TextSize = 18
+    button.Font = Enum.Font.SourceSans
+    button.Position = UDim2.new(0, 10, 0, position)
+    button.Size = UDim2.new(1, -20, 0, 30)
+    button.BackgroundColor3 = Color3.fromRGB(50, 120, 200)
+    button.BorderColor3 = Color3.fromRGB(100, 100, 100)
+    button.Parent = mainFrame
+    button.MouseButton1Click:Connect(onClick)
+    return button
+end
 
--- Add a textbox to enter speed
-SpeedGroupBox:AddInput('SpeedInput', {
-    Default = '16',
-    Numeric = true,
-    Finished = false,
-    Text = 'Enter Speed',
-    Tooltip = 'Set your character speed',
-})
+-- Create GUI components
+local speedInput = createInput("16", true, 10)
+createLabel("Enter Speed:", 50)
+local applySpeedButton = createButton("Apply Speed", function()
+    local speed = tonumber(speedInput.Text)
+    if speed then
+        player.Character.Humanoid.WalkSpeed = speed
+        _G.WalkSpeed = speed
+    else
+        print("Invalid speed input!")
+    end
+end, 90)
 
--- Add a button to apply speed
-SpeedGroupBox:AddButton('Apply Speed', function()
-    local speed = Options.SpeedInput.Value
-    local player = game.Players.LocalPlayer
-    local character = player.Character or player.CharacterAdded:Wait()
-    local humanoid = character:WaitForChild("Humanoid")
-    humanoid.WalkSpeed = tonumber(speed)
+local hitboxInput = createInput("5", true, 150)
+createLabel("Enter Hitbox Size:", 190)
+local applyHitboxButton = createButton("Apply Hitbox (ESP)", function()
+    local size = tonumber(hitboxInput.Text)
+    if size then
+        _G.HeadSize = size
+        for _, otherPlayer in ipairs(game.Players:GetPlayers()) do
+            if otherPlayer ~= player then
+                local rootPart = otherPlayer.Character and otherPlayer.Character:FindFirstChild("HumanoidRootPart")
+                if rootPart then
+                    rootPart.Size = Vector3.new(size, size, size)
+                    rootPart.Transparency = 0.7
+                    rootPart.BrickColor = BrickColor.new("Really blue")
+                    rootPart.Material = Enum.Material.Neon
+                    rootPart.CanCollide = false
+                end
+            end
+        end
+    else
+        print("Invalid hitbox size input!")
+    end
+end, 230)
 
-    -- Persist the speed in a global variable
-    _G.WalkSpeed = tonumber(speed)
-end)
-
--- Add a groupbox for hitbox settings within the "GPO BR" tab
-local HitboxGroupBox = GPOTab:AddLeftGroupbox('Hitbox')
-
--- Add a textbox to enter hitbox size
-HitboxGroupBox:AddInput('HitboxInput', {
-    Default = '5',
-    Numeric = true,
-    Finished = false,
-    Text = 'Enter Hitbox Size',
-    Tooltip = 'Set the hitbox size for other players',
-})
-
--- Add a button to apply hitbox size and render through walls
-HitboxGroupBox:AddButton('Apply Hitbox (ESP)', function()
-    local size = Options.HitboxInput.Value
-    _G.HeadSize = tonumber(size)
-    for _, player in ipairs(game:GetService('Players'):GetPlayers()) do
-        if player.Name ~= game.Players.LocalPlayer.Name then
-            pcall(function()
-                local rootPart = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+local enableESPToggle = createButton("Enable ESP", function()
+    _G.Disabled = not _G.Disabled
+    if not _G.Disabled then
+        for _, otherPlayer in ipairs(game.Players:GetPlayers()) do
+            if otherPlayer ~= player then
+                local rootPart = otherPlayer.Character and otherPlayer.Character:FindFirstChild("HumanoidRootPart")
                 if rootPart then
                     rootPart.Size = Vector3.new(_G.HeadSize, _G.HeadSize, _G.HeadSize)
                     rootPart.Transparency = 0.7
                     rootPart.BrickColor = BrickColor.new("Really blue")
-                    rootPart.Material = "Neon"
+                    rootPart.Material = Enum.Material.Neon
                     rootPart.CanCollide = false
                 end
-            end)
-        end
-    end
-end)
-
--- Add a groupbox for ESP settings within the "GPO BR" tab
-local ESPGroupBox = GPOTab:AddRightGroupbox('ESP')
-
--- Add a toggle to enable/disable ESP
-ESPGroupBox:AddToggle('EnableESP', {
-    Text = 'Enable ESP',
-    Default = false,
-    Tooltip = 'Toggle ESP to locate players',
-})
-
--- Function to create ESP for players
-local function createESP(player)
-    if player.Character and not player.Character:FindFirstChild("ESPBox") then
-        local box = Instance.new("BoxHandleAdornment")
-        box.Name = "ESPBox"
-        box.Adornee = player.Character:WaitForChild("HumanoidRootPart")
-        box.AlwaysOnTop = true
-        box.ZIndex = 5
-        box.Size = player.Character.HumanoidRootPart.Size + Vector3.new(1, 1, 1)
-        box.Transparency = 0.7
-        box.Color3 = Color3.new(1, 0, 0) -- Red color
-        box.Parent = player.Character.HumanoidRootPart
-    end
-end
-
--- Function to remove ESP from players
-local function removeESP(player)
-    if player.Character and player.Character:FindFirstChild("ESPBox") then
-        player.Character:FindFirstChild("ESPBox"):Destroy()
-    end
-end
-
--- Toggle ESP functionality
-Options.EnableESP:OnChanged(function()
-    if Options.EnableESP.Value then
-        for _, player in ipairs(game:GetService('Players'):GetPlayers()) do
-            if player ~= game.Players.LocalPlayer then
-                createESP(player)
-            end
-        end
-        game:GetService('Players').PlayerAdded:Connect(function(player)
-            if player ~= game.Players.LocalPlayer then
-                player.CharacterAdded:Connect(function()
-                    createESP(player)
-                end)
-            end
-        end)
-    else
-        for _, player in ipairs(game:GetService('Players'):GetPlayers()) do
-            if player ~= game.Players.LocalPlayer then
-                removeESP(player)
             end
         end
     end
-end)
+end, 310)
 
--- Replace ESP functionality with rendering through walls
-_G.HeadSize = 5
-_G.Disabled = true
-
-game:GetService('RunService').RenderStepped:Connect(function()
-    if _G.Disabled then
-        for _, player in ipairs(game:GetService('Players'):GetPlayers()) do
-            if player.Name ~= game:GetService('Players').LocalPlayer.Name then
-                pcall(function()
-                    local rootPart = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-                    if rootPart then
-                        rootPart.Size = Vector3.new(_G.HeadSize, _G.HeadSize, _G.HeadSize)
-                        rootPart.Transparency = 0.7
-                        rootPart.BrickColor = BrickColor.new("Really blue")
-                        rootPart.Material = "Neon"
-                        rootPart.CanCollide = false
-                    end
-                end)
-            end
-        end
-    end
-end)
-
--- Apply initial settings and start maintaining speed
-Library:SetWatermarkVisibility(true)
-Library:SetWatermark('GPO BR')
-
-ThemeManager:SetLibrary(Library)
-SaveManager:SetLibrary(Library)
-
-ThemeManager:ApplyToTab(Window)
-SaveManager:LoadAutoloadConfig()
-
-local function maintainSpeed()
-    while true do
-        local player = game.Players.LocalPlayer
-        local character = player.Character
-        if character then
-            local humanoid = character:FindFirstChild("Humanoid")
-            if humanoid and _G.WalkSpeed then
-                if humanoid.WalkSpeed ~= _G.WalkSpeed then
-                    humanoid.WalkSpeed = _G.WalkSpeed
-                end
-            end
-        end
-        wait(1) -- Check every second
-    end
-end
-
-maintainSpeed()  -- Start maintaining speed
-
--- Minimize and maximize GUI functionality
+-- Function to toggle GUI visibility
 local guiMinimized = false
-
 local function toggleGUI()
     guiMinimized = not guiMinimized
-    Window:SetVisible(not guiMinimized)
+    mainFrame.Visible = not guiMinimized
 end
 
--- Add minimize button to toggle GUI visibility
-local MinimizeButton = Window:AddButton('Minimize', toggleGUI)
+-- Add minimize button
+createButton("Minimize", toggleGUI, 350)
 
--- Ensure GUI starts as visible
-Window:SetVisible(true)
+-- Function to handle keyboard input
+game:GetService("UserInputService").InputBegan:Connect(function(input, gameProcessed)
+    if not gameProcessed and input.KeyCode == Enum.KeyCode.H then
+        toggleGUI()
+    end
+end)
+
+-- Initial visibility
+mainFrame.Visible = true
